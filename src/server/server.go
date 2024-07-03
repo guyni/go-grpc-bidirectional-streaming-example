@@ -4,8 +4,13 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
 
 	pb "github.com/pahanini/go-grpc-bidirectional-streaming-example/src/proto"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	ghs "golang.stackrox.io/grpc-http1/server"
 
 	"google.golang.org/grpc"
 )
@@ -69,8 +74,16 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterMathServer(s, &server{})
 
-	// and start...
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
+	downgradingSrv := &http.Server{}
+	var h2Srv http2.Server
+	_ = http2.ConfigureServer(downgradingSrv, &h2Srv)
+	opts2 := []ghs.Option{ghs.PreferGRPCWeb(true)}
+	downgradingSrv.Handler = h2c.NewHandler(ghs.CreateDowngradingHandler(s, http.NotFoundHandler(), opts2...), &h2Srv)
+	downgradingSrv.Serve(lis)
+	/*
+		// and start...
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	*/
 }

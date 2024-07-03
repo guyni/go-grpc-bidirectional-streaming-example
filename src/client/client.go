@@ -8,16 +8,24 @@ import (
 
 	pb "github.com/pahanini/go-grpc-bidirectional-streaming-example/src/proto"
 
+	"golang.stackrox.io/grpc-http1/client"
+
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
 	rand.Seed(time.Now().Unix())
 
+	opts := []client.ConnectOption{client.DialOpts(grpc.WithTransportCredentials(insecure.NewCredentials()))}
+	opts = append(opts, client.UseWebSocket(true))
+	//	opts = append(opts, client.UseWebSocket(true), client.ForceDowngrade(true))
+
+	conn, err := client.ConnectViaProxy(context.TODO(), ":50005", nil, opts...)
 	// dail server
-	conn, err := grpc.Dial(":50005", grpc.WithInsecure())
+	//conn, err := grpc.Dial(":50005", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("can not connect with server %v", err)
 	}
