@@ -2,28 +2,36 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 	"log"
 	"math/rand"
 
 	pb "github.com/pahanini/go-grpc-bidirectional-streaming-example/src/proto"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"golang.stackrox.io/grpc-http1/client"
 
 	"time"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
 	rand.Seed(time.Now().Unix())
+	useTls := true
+	var tlsConfig *tls.Config
+	opts := []client.ConnectOption{client.UseWebSocket(true)}
 
-	opts := []client.ConnectOption{client.DialOpts(grpc.WithTransportCredentials(insecure.NewCredentials()))}
-	opts = append(opts, client.UseWebSocket(true))
-	//	opts = append(opts, client.UseWebSocket(true), client.ForceDowngrade(true))
-
-	conn, err := client.ConnectViaProxy(context.TODO(), ":50005", nil, opts...)
+	target := "localhost:80"
+	if useTls {
+		target = "localhost:443"
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+	} else {
+		opts = append(opts, client.DialOpts(grpc.WithTransportCredentials(insecure.NewCredentials())))
+	}
+	conn, err := client.ConnectViaProxy(context.TODO(), target, tlsConfig, opts...)
 	// dail server
 	//conn, err := grpc.Dial(":50005", grpc.WithInsecure())
 	if err != nil {

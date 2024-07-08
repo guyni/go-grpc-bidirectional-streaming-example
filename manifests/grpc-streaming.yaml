@@ -1,0 +1,23 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: grpc-streaming-app
+  labels:
+    app: grpc-streaming
+spec:
+  containers:
+    - name: grpc-streaming
+      image: guyni/grpc-streaming
+      imagePullPolicy: Always
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: grpc-streaming-service
+spec:
+  selector:
+    app: grpc-streaming
+  ports:
+    - port: 50005
