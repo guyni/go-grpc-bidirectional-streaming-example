@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"flag"
 	"io"
 	"log"
 	"math/rand"
 
 	pb "github.com/pahanini/go-grpc-bidirectional-streaming-example/src/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"golang.stackrox.io/grpc-http1/client"
@@ -17,23 +19,38 @@ import (
 )
 
 func main() {
-	rand.Seed(time.Now().Unix())
-	useTls := true
-	var tlsConfig *tls.Config
-	opts := []client.ConnectOption{client.UseWebSocket(true)}
+	// if useWebSocket is false, use plain old gRPC client
+	useWebSocket := flag.Bool("useWebSocket", true, "gRPC over websocket")
+	useTLS := flag.Bool("useTLS", true, "use TLS")
+	target := flag.String("target", ":50005", "gRPC target URI")
+	flag.Parse()
 
-	target := "localhost:80"
-	if useTls {
-		target = "localhost:443"
+	rand.Seed(time.Now().Unix())
+	var tlsConfig *tls.Config
+	var cred credentials.TransportCredentials
+
+	if *useTLS {
 		tlsConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}
+		cred = credentials.NewTLS(tlsConfig)
 	} else {
-		opts = append(opts, client.DialOpts(grpc.WithTransportCredentials(insecure.NewCredentials())))
+		cred = insecure.NewCredentials()
 	}
-	conn, err := client.ConnectViaProxy(context.TODO(), target, tlsConfig, opts...)
-	// dail server
-	//conn, err := grpc.Dial(":50005", grpc.WithInsecure())
+	var conn *grpc.ClientConn
+	var err error
+	if *useWebSocket {
+		opts := []client.ConnectOption{}
+		// use insecure.NewCredentials() here since in memory proxy is non tls
+		opts = append(opts, client.DialOpts(grpc.WithTransportCredentials(insecure.NewCredentials())))
+		opts = append(opts, client.UseWebSocket(true))
+		// tlsConfig is for target gRPC server and opts is for local in memory proxy
+		conn, err = client.ConnectViaProxy(context.TODO(), *target, tlsConfig, opts...)
+	} else {
+		// dail server directly
+		conn, err = grpc.NewClient(*target, grpc.WithTransportCredentials(cred))
+	}
+
 	if err != nil {
 		log.Fatalf("can not connect with server %v", err)
 	}

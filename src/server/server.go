@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"io"
 	"log"
 	"net"
@@ -64,6 +65,9 @@ func (s server) Max(srv pb.Math_MaxServer) error {
 }
 
 func main() {
+	useWebSocket := flag.Bool("useWebSocket", true, "gRPC over websocket")
+	flag.Parse()
+
 	// create listener
 	lis, err := net.Listen("tcp", ":50005")
 	if err != nil {
@@ -74,16 +78,17 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterMathServer(s, &server{})
 
-	downgradingSrv := &http.Server{}
-	var h2Srv http2.Server
-	_ = http2.ConfigureServer(downgradingSrv, &h2Srv)
-	opts2 := []ghs.Option{ghs.PreferGRPCWeb(true)}
-	downgradingSrv.Handler = h2c.NewHandler(ghs.CreateDowngradingHandler(s, http.NotFoundHandler(), opts2...), &h2Srv)
-	downgradingSrv.Serve(lis)
-	/*
-		// and start...
+	if *useWebSocket {
+		downgradingSrv := &http.Server{}
+		var h2Srv http2.Server
+		_ = http2.ConfigureServer(downgradingSrv, &h2Srv)
+		opts2 := []ghs.Option{ghs.PreferGRPCWeb(true)}
+		downgradingSrv.Handler = h2c.NewHandler(ghs.CreateDowngradingHandler(s, http.NotFoundHandler(), opts2...), &h2Srv)
+		downgradingSrv.Serve(lis)
+	} else {
+		// start regular gRPC server ...
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %v", err)
 		}
-	*/
+	}
 }
