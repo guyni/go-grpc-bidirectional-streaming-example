@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"io"
 	"log"
@@ -31,7 +32,8 @@ func main() {
 
 	if *useTLS {
 		tlsConfig = &tls.Config{
-			InsecureSkipVerify: true,
+			InsecureSkipVerify:    true,
+			VerifyPeerCertificate: printPeerCertificate,
 		}
 		cred = credentials.NewTLS(tlsConfig)
 	} else {
@@ -115,4 +117,17 @@ func main() {
 
 	<-done
 	log.Printf("finished with max=%d", max)
+}
+
+func printPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+	for i, item := range rawCerts {
+		if cert, err := x509.ParseCertificate(item); err == nil {
+			log.Printf("cert %d: subject name is : %s\n", i, cert.Subject.CommonName)
+			log.Printf("subject: %v\n", cert.Subject)
+			log.Printf("issuer: %v\n", cert.Issuer)
+		} else {
+			log.Println(err)
+		}
+	}
+	return nil
 }
