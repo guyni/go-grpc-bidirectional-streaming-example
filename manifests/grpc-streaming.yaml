@@ -9,6 +9,8 @@ spec:
     - name: grpc-streaming
       image: guyni/grpc-streaming
       imagePullPolicy: Always
+      command: ["/server"]
+      args: ["-useWebSocket=true"]
 
 ---
 
