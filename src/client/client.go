@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 
 	"golang.stackrox.io/grpc-http1/client"
 
@@ -24,6 +25,7 @@ func main() {
 	useWebSocket := flag.Bool("useWebSocket", true, "gRPC over websocket")
 	useTLS := flag.Bool("useTLS", true, "use TLS")
 	target := flag.String("target", ":50005", "gRPC target URI")
+	token := flag.String("token", "", "authentication token")
 	flag.Parse()
 
 	rand.Seed(time.Now().Unix())
@@ -58,8 +60,15 @@ func main() {
 	}
 
 	// create stream
+	clientCtx := context.Background()
+	if *token != "" {
+		// set token to header
+		md := metadata.Pairs("authorization", *token)
+		clientCtx = metadata.NewOutgoingContext(clientCtx, md)
+	}
+
 	client := pb.NewMathClient(conn)
-	stream, err := client.Max(context.Background())
+	stream, err := client.Max(clientCtx)
 	if err != nil {
 		log.Fatalf("openn stream error %v", err)
 	}

@@ -14,6 +14,9 @@ import (
 	ghs "golang.stackrox.io/grpc-http1/server"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 type server struct {
@@ -75,7 +78,7 @@ func main() {
 	}
 
 	// create grpc server
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.StreamInterceptor(streamInterceptor))
 	pb.RegisterMathServer(s, &server{})
 
 	if *useWebSocket {
@@ -84,6 +87,7 @@ func main() {
 		_ = http2.ConfigureServer(downgradingSrv, &h2Srv)
 		opts2 := []ghs.Option{ghs.PreferGRPCWeb(true)}
 		downgradingSrv.Handler = h2c.NewHandler(ghs.CreateDowngradingHandler(s, http.NotFoundHandler(), opts2...), &h2Srv)
+		downgradingSrv.Handler = authenticationMiddleware(downgradingSrv.Handler)
 		downgradingSrv.Serve(lis)
 	} else {
 		// start regular gRPC server ...
@@ -91,4 +95,45 @@ func main() {
 			log.Fatalf("failed to serve: %v", err)
 		}
 	}
+}
+
+// websocket middleware to verify token
+func authenticationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("## headers")
+		for k, v := range r.Header {
+			log.Printf("%s, %s\n", k, v)
+		}
+		token := r.Header.Get("authorization")
+		log.Printf("## token: %s\n", token)
+		if token != "abcd1234" {
+			log.Println("Invalid token")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// gRPC stream interceptor to verify token in header
+func streamInterceptor(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	// authentication (token verification)
+	md, ok := metadata.FromIncomingContext(ss.Context())
+	if !ok {
+		return status.Errorf(codes.Unauthenticated, "Missing metadata")
+	}
+	authHeader, ok := md["authorization"]
+	if !ok {
+		log.Println("Authorization token is not supplied")
+		return status.Errorf(codes.Unauthenticated, "Authorization token is not supplied")
+	}
+
+	token := authHeader[0]
+	log.Printf("token: %s\n", token)
+	// hardcode token here
+	if token != "abcd1234" {
+		log.Println("Invalid token")
+		return status.Errorf(codes.Unauthenticated, "Invalid token")
+	}
+	return handler(srv, ss)
 }
