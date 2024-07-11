@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
     - name: grpc-streaming
-      image: guyni/grpc-streaming
+      image: gcr.io/spectro-dev-public/guyni/grpc-streaming:latest
       imagePullPolicy: Always
       command: ["/server"]
       args: ["-useWebSocket=true"]

@@ -41,7 +41,9 @@ It should create two binaries `server` and `client`
 
 ## Use
 
-Start server `./server` and in other terminal start `./client`
+Start server `./server -useWebSocket=true` and in other terminal start `./client`
+
+./client -target=":50005" -useTLS=false -useWebSocket=true -token="abcd1234"
 
 Client output example:
 
