@@ -11,5 +11,6 @@ FROM alpine:3.20
 
 WORKDIR /
 COPY --from=builder /build/server server
+COPY --from=builder /build/clietn client
 
 ENTRYPOINT ["/server"]
