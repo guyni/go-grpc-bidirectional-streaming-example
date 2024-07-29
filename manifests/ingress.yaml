@@ -3,13 +3,14 @@ kind: Ingress
 metadata:
   name: grpc-streaming-ingress
   annotations:
-    ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   rules:
   - http:
       paths:
-        - path: /
-          pathType: Prefix
+        - path: /grpc-ws(/|$)(.*)
+          pathType: ImplementationSpecific
           backend:
             service:
               name: grpc-streaming-service

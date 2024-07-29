@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"net/url"
 
 	pb "github.com/pahanini/go-grpc-bidirectional-streaming-example/src/proto"
 	"google.golang.org/grpc"
@@ -48,6 +49,7 @@ func main() {
 		// use insecure.NewCredentials() here since in memory proxy is non tls
 		opts = append(opts, client.DialOpts(grpc.WithTransportCredentials(insecure.NewCredentials())))
 		opts = append(opts, client.UseWebSocket(true))
+		opts = append(opts, client.UrlRewrite(addPrefix))
 		// tlsConfig is for target gRPC server and opts is for local in memory proxy
 		conn, err = client.ConnectViaProxy(context.TODO(), *target, tlsConfig, opts...)
 	} else {
@@ -139,4 +141,9 @@ func printPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificat
 		}
 	}
 	return nil
+}
+
+func addPrefix(u *url.URL) *url.URL {
+	u.Path = "/grpc-ws" + u.Path
+	return u
 }
