@@ -20,4 +20,4 @@ require (
 	nhooyr.io/websocket v1.8.11 // indirect
 )
 
-replace golang.stackrox.io/grpc-http1 v0.3.12 => github.com/spectrocloud/go-grpc-http1 v0.0.5-spectro
+replace golang.stackrox.io/grpc-http1 v0.3.12 => github.com/spectrocloud/go-grpc-http1 v0.0.7-spectro
